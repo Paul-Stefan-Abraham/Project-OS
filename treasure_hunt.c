@@ -1,6 +1,138 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
+
+char* get_time(){
+
+    static char current_time[100];
+    time_t t = time(NULL);
+    struct tm *tm_info=localtime(&t);
+    strftime(current_time,sizeof(current_time), "%Y-%m-%d %H:%M:%S", tm_info);
+    return current_time;
+
+}
+
+DIR* search_hunt(const char *hunt_id, const char *base_dir) {
+    struct dirent *entry;
+    DIR *dir=opendir(base_dir);
+
+    if (dir==NULL) {
+        perror("opendir");
+        return NULL;
+    }
+
+    while((entry = readdir(dir)) != NULL) {
+        if(strcmp(entry->d_name,".")==0 ||strcmp(entry->d_name, "..")== 0) //skip parent and current
+            continue;
+
+        char path[1024];
+        snprintf(path, sizeof(path), "%s/%s", base_dir, entry->d_name);
+
+        struct stat statbuf;
+        if(stat(path,&statbuf)==-1) { //struct exists
+            perror("stat");
+            continue;
+        }
+
+        if(strcmp(entry->d_name,hunt_id)==0 &&S_ISDIR(statbuf.st_mode)) { //dir is found
+            closedir(dir);
+            return opendir(path);  
+        }
+
+    }
+
+    closedir(dir);
+    return NULL;
+}
+
+void add_treasure(const char* hunt_id, const char* treasure_id) {
+
+    //create hunt path
+    char pwd_path[256];
+    getcwd(pwd_path, 256);
+    char base_path[265];
+    sprintf(base_path,"%s/hunt",pwd_path);
+
+    DIR *hunt_dir = search_hunt(hunt_id, base_path);
+
+    if (hunt_dir == NULL) {
+
+        //create dir
+        char hunt_path[1024];
+        snprintf(hunt_path, sizeof(hunt_path), "%s/%s", base_path, hunt_id);
+
+        if (mkdir(hunt_path, 0777) != 0) {
+            perror("could not create hunt dir");
+            return;
+        }
+
+        hunt_dir = opendir(hunt_path);
+        if (hunt_dir == NULL) {
+            perror("opendir on newly created hunt dir failed");
+            return;
+        }
+
+        printf("Created and opened new hunt dir: %s\n", hunt_path);
+
+
+        //create hunt log 
+        FILE *hunt_id_log;
+        char log_path[2000];
+
+        snprintf(log_path, sizeof(log_path), "%s/%s_logs.txt", hunt_path, hunt_id);
+        printf("hunt log: %s\n",log_path);
+        if((hunt_id_log=fopen(log_path,"w"))==NULL){
+             perror("could not create hunt_log");
+            return;
+        }
+
+        fputs("log created at: ",hunt_id_log);
+        fputs(get_time(),hunt_id_log);
+
+
+        //create final_log and symlink
+        
+        //FILE *final_hunt_id_log;
+        char final_log_path[2000];
+
+        snprintf(final_log_path, sizeof(final_log_path), "%s/logs/final_%s_logs.txt", pwd_path, hunt_id);
+        //printf("final hunt log: %s",final_log_path);
+
+        /*
+        if((final_hunt_id_log=fopen(final_log_path,"w"))==NULL){
+             perror("could not create final_hunt_log");
+            return;
+        }
+
+        fputs("final log created at: ",final_hunt_id_log);
+        fputs(get_time(),final_hunt_id_log);
+
+        fclose(final_hunt_id_log);
+        */
+
+        //create symlink
+         if (symlink(log_path, final_log_path) == 0) {
+            printf("Symlink created: %s ---> %s\n", final_log_path, log_path);
+        } else {
+            perror("error creating symlink\n");
+            return;
+        }
+        
+        fclose(hunt_id_log);
+
+        } else {
+            printf("Hunt found!\n");
+    
+    }
+
+    //create treasure file and the rest
+   
+}
+
 int main(int argc, char **argv){
 
     if(argc!=3 && argc!=4){
@@ -14,12 +146,12 @@ int main(int argc, char **argv){
 
     if(strcmp(argv[1],"add")==0){
 
-        if(argc!=3){
+        if(argc!=4){
             printf("wrong input for add\n");
             exit(1);
         }
 
-        //add_treasure(argv[2]);//take id then take data from stdin and add to existing hunt or create new one
+        add_treasure(argv[2],argv[3]);//input data, store in right hunt/ create new one 
 
     }
 
