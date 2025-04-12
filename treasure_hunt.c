@@ -68,7 +68,7 @@ void add_treasure(const char* hunt_id, const char* treasure_id) {
     getcwd(pwd_path, 256);
     char base_path[265];
     snprintf(base_path,sizeof(base_path),"%s/hunt",pwd_path);
-
+    mkdir(base_path, 0777);
     DIR *hunt_dir = search_hunt(hunt_id, base_path);
     FILE *log;
     
@@ -116,17 +116,11 @@ void add_treasure(const char* hunt_id, const char* treasure_id) {
         snprintf(final_log_path, sizeof(final_log_path), "%s/logs/final_%s_logs.txt", pwd_path, hunt_id);
         //printf("final hunt log: %s",final_log_path);
 
-        /*
-        if((final_hunt_id_log=fopen(final_log_path,"w"))==NULL){
-             perror("could not create final_hunt_log");
-            return;
-        }
-
-        fputs("final log created at: ",final_hunt_id_log);
-        fputs(get_time(),final_hunt_id_log);
-
-        fclose(final_hunt_id_log);
-        */
+        
+    //creates logs if they dont exist
+       char logs_path[1024];
+        snprintf(logs_path, sizeof(logs_path), "%s/logs", pwd_path);
+        mkdir(logs_path, 0777);
 
         //create symlink
          if (symlink(log_path, final_log_path) == 0) {
