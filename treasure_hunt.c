@@ -6,6 +6,13 @@
 #include <unistd.h>
 #include <time.h>
 
+
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+//((((((((((((((((((((((((((((((((((((((((((((((  ADD TREASURE ))))))))))))))))))))))))))))))))))))))))))))))
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+
+/////////////////////////////////////
+//returns current time formated nicely
 char* get_time(){
 
     static char current_time[100];
@@ -16,6 +23,8 @@ char* get_time(){
 
 }
 
+//////////////////////////////////////
+//return path of hunt or null
 DIR* search_hunt(const char *hunt_id, const char *base_dir) {
     struct dirent *entry;
     DIR *dir=opendir(base_dir);
@@ -49,16 +58,20 @@ DIR* search_hunt(const char *hunt_id, const char *base_dir) {
     return NULL;
 }
 
+
+/////////////////////////////////////
+//searches/ creates hunt dir and creates treasurefile /& adds treasure
 void add_treasure(const char* hunt_id, const char* treasure_id) {
 
     //create hunt path
     char pwd_path[256];
     getcwd(pwd_path, 256);
     char base_path[265];
-    sprintf(base_path,"%s/hunt",pwd_path);
+    snprintf(base_path,sizeof(base_path),"%s/hunt",pwd_path);
 
     DIR *hunt_dir = search_hunt(hunt_id, base_path);
-
+    FILE *log;
+    
     if (hunt_dir == NULL) {
 
         //create dir
@@ -89,10 +102,11 @@ void add_treasure(const char* hunt_id, const char* treasure_id) {
              perror("could not create hunt_log");
             return;
         }
-
-        fputs("log created at: ",hunt_id_log);
+        fputs("///////////////////////////////////////////////\n",hunt_id_log);
+        fputs(hunt_id,hunt_id_log);
+        fputs(" log created at: ",hunt_id_log);
         fputs(get_time(),hunt_id_log);
-
+        fputs("\n///////////////////////////////////////////////\n",hunt_id_log);
 
         //create final_log and symlink
         
@@ -121,17 +135,99 @@ void add_treasure(const char* hunt_id, const char* treasure_id) {
             perror("error creating symlink\n");
             return;
         }
+        log=hunt_id_log;
         
-        fclose(hunt_id_log);
 
         } else {
             printf("Hunt found!\n");
-    
+
+            char log_path[2000];
+            char log_name[40];
+
+            snprintf(log_name,sizeof(log_name),"%s_logs.txt",hunt_id);
+            snprintf(log_path,sizeof(log_path),"%s/%s/%s",base_path,hunt_id,log_name);
+             if((log=fopen(log_path,"a"))==NULL){
+                printf("error opening treasure.dat file\n");
+                exit(4);
+             }
+        }
+
+    //create /open treasure file
+    FILE *t_file;
+    char t_file_path[2000];
+    char fname[40];
+    snprintf(fname,sizeof(fname),"treasure_%s.dat",hunt_id);
+    snprintf(t_file_path,sizeof(t_file_path),"%s/%s/%s",base_path,hunt_id,fname);
+    printf("%s\n",t_file_path);
+
+    if((t_file=fopen(t_file_path,"a+"))==NULL){
+        printf("error opening treasure.dat file\n");
+        exit(4);
     }
 
-    //create treasure file and the rest
-   
+    //case of old or new treasure file
+    fseek(t_file, 0, SEEK_END);     
+    long size = ftell(t_file);       
+    if (size == 0) {
+        
+        fwrite("data-->id,user_id,lat,lon,clue,value\n",37*(sizeof(char)),1,t_file);
+        fputs("created new ",log);
+        fputs(fname,log);
+        fputs(" ",log);
+        fputs(get_time(),log);
+        fputs("\n///////////////////////////////////////////////\n",log);
+        fputs("///////////////begining of logged data////////////\n",log);
+
+    }
+    else{
+        fseek(log,0,SEEK_CUR);
+    }
+
+    //getting data
+    printf("Now insert the treasure data\n");
+    printf("user_id: ");
+    char user_id[30];
+    scanf("%30s",user_id);
+
+    printf("latitude,longitude: ");
+    float latitude,longitude;
+    scanf("%30f,%30f",&latitude,&longitude);
+
+    printf("clue:");
+    char clue[100];
+    getchar(); 
+    fgets(clue, sizeof(clue), stdin);
+    clue[strcspn(clue, "\n")] = 0;
+
+    printf("value:");
+    int value;
+    scanf("%d",&value);
+
+    //adding data
+    char treasure_data[300];
+    snprintf(treasure_data,sizeof(treasure_data),"%s,%s,%f,%f,%s,%d",treasure_id,user_id,latitude,longitude,clue,value);
+    fwrite(treasure_data, sizeof(char), strlen(treasure_data), t_file);
+    fputc('\n', t_file);
+
+    fputs("added ",log);
+    fputs(treasure_id,log);
+    fputs(" ",log);
+    fputs(get_time(),log);
+    fputs("\n",log);
+
+    fclose(log);
+    fclose(t_file);
 }
+
+
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+//((((((((((((((((((((((((((((((((((((((((((((((  LIST TREASURE ))))))))))))))))))))))))))))))))))))))))))))))
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+
+void list_hunt(char* hunt_id){
+
+}
+
 
 int main(int argc, char **argv){
 
@@ -165,7 +261,7 @@ int main(int argc, char **argv){
             exit(2);
         }
 
-        //list_hunt(argv[2]);//take huntid find it and parse if exists
+        list_hunt(argv[2]);//take huntid find it and parse if exists
 
     }
 
