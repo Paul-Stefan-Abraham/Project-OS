@@ -10,6 +10,7 @@
 #define PATH_SIZE 1000
 #define PATH2_SIZE 1500
 #define LINE_SIZE 256
+#define FILE_READ 2000
 //(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
 //((((((((((((((((((((((((((((((((((((((((((((((  ADD TREASURE ))))))))))))))))))))))))))))))))))))))))))))))
 //(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
@@ -306,6 +307,7 @@ void list_hunt(const char hunt_id[]){
 //(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
 
 
+
 void view_treasure(const char hunt_id[],const char tr_id[]){
 
     char pwd_path[PWD_SIZE];
@@ -374,10 +376,196 @@ void view_treasure(const char hunt_id[],const char tr_id[]){
     }
 }
 
+
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+//((((((((((((((((((((((((((((((((((((((((((((((  REMOVE TREASURE ))))))))))))))))))))))))))))))))))))))))))))))
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+
+void remove_treasure(const char*hunt_id, const char* tr_id){
+
+    char pwd_path[PWD_SIZE];
+    getcwd(pwd_path, PWD_SIZE);
+    char base_path[PATH_SIZE];
+    snprintf(base_path,sizeof(base_path),"%s/hunt",pwd_path);
+    DIR *hunt_dir = search_hunt(hunt_id, base_path);
+    
+    
+    if (hunt_dir == NULL){
+        printf("Hunt_id not found among directories\n");
+        exit(5);
+    }
+    else{
+        
+        FILE* treasure_file;
+        FILE* temp_tr_file;
+        FILE* log_file;
+
+        char tr_path[PATH2_SIZE];
+        char temp_tr_path[PATH2_SIZE];
+        char log_path[PATH2_SIZE];
+        
+        snprintf(tr_path,sizeof(tr_path),"%s/%s/treasure_%s.dat",base_path,hunt_id,hunt_id);
+        snprintf(temp_tr_path,sizeof(temp_tr_path),"%s/%s/temp_treasure_%s.dat",base_path,hunt_id,hunt_id);
+        snprintf(log_path,sizeof(log_path),"%s/%s/%s_logs.txt",base_path,hunt_id,hunt_id);
+
+        if((treasure_file=fopen(tr_path,"r+"))==NULL){
+            printf("Failed opening .dat file\n");
+            exit(5);
+        }
+        if((temp_tr_file=fopen(temp_tr_path,"w+"))==NULL){
+            printf("Failed opening temp.dat file\n");
+            exit(5);
+        }
+
+        if((log_file=fopen(log_path,"a"))==NULL){
+            printf("Failed opening log file\n");
+            exit(5);
+        }
+
+
+        //parse file and print searched treasure
+       int found=0;
+        char buf[FILE_READ];
+
+        while(fgets(buf,sizeof(buf),treasure_file)){
+
+            char* potential_tr=strstr(buf,tr_id);
+            
+            if(potential_tr!=NULL){
+                found=1;
+                char *rest_buf=strchr(potential_tr,'\n')+1;
+                buf[buf-potential_tr]='\0';
+                fputs(buf,temp_tr_file);
+                fputs(rest_buf,temp_tr_file);
+
+            }else{
+                fputs(buf,temp_tr_file);
+            }
+        }
+
+        
+
+        //log action to log file
+
+        fseek(log_file,0,SEEK_END);
+        fputs(tr_id,log_file);
+        if(found){
+            fputs(" Treasure found and removed at: ",log_file);
+
+            //also replace the tr_file with temp
+             if(remove(tr_path)!=0){
+                printf("Could not delete tr_file\n");
+                exit(6);
+            }else{
+                printf("tr_file removed!\n");
+            }
+
+             if(rename(temp_tr_path,tr_path)!=0){
+                printf("Could not rename temp_tr_file\n");
+                exit(6);
+            }else{
+                printf("tr_file renamed. exchange succesful!\n");
+            }
+
+        }else{
+            fputs(" Treasure could not be removed at: ",log_file);
+            printf("Treasure %s not found\n",tr_id);
+            //just delete temp
+             if(remove(temp_tr_path)!=0){
+                printf("Could not delete temp_tr_file\n");
+                exit(6);
+            }else{
+                printf("temp_tr_file removed!\n");
+            }
+        }
+        fputs(get_time(),log_file);
+        fputc('\n',log_file);
+        fclose(log_file);
+
+        fclose(treasure_file);
+        
+         
+    }
+
+
+}
+
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+//((((((((((((((((((((((((((((((((((((((((((((((  REMOVE HUNT ))))))))))))))))))))))))))))))))))))))))))))))
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+
+void remove_hunt(const char* hunt_id){
+
+    char pwd_path[PWD_SIZE];
+    getcwd(pwd_path, PWD_SIZE);
+    char base_path[PATH_SIZE];
+    snprintf(base_path,sizeof(base_path),"%s/hunt",pwd_path);
+    DIR *hunt_dir = search_hunt(hunt_id, base_path);
+    
+    
+    if (hunt_dir == NULL){
+        printf("Hunt_id not found among directories\n");
+        exit(5);
+    }
+    else{
+    
+        char tr_path[PATH2_SIZE];
+        char log_path[PATH2_SIZE];
+        
+        snprintf(tr_path,sizeof(tr_path),"%s/%s/treasure_%s.dat",base_path,hunt_id,hunt_id);
+        snprintf(log_path,sizeof(log_path),"%s/%s/%s_logs.txt",base_path,hunt_id,hunt_id);
+
+        if(remove(tr_path)!=0){
+            printf("Could not delete tr_file\n");
+            exit(6);
+        }else{
+            printf("tr_file removed!\n");
+        }
+
+        if(remove(log_path)!=0){
+            printf("Cold not delete log_file\n");
+            exit(6);
+        }{
+            printf("log_file removed!\n");
+        }
+
+        char hunt_path[PATH2_SIZE];
+        snprintf(hunt_path, sizeof(hunt_path), "%s/%s", base_path, hunt_id);
+
+        if(rmdir(hunt_path)!=0){
+             printf("Cold not delete hunt_dir\n");
+            exit(6);
+        }{
+            printf("hunt_id_dir removed!\n");
+        }
+
+        char link_path[PATH2_SIZE];
+        snprintf(link_path, sizeof(link_path), "%s/logs/final_%s_logs.txt", pwd_path,hunt_id);
+
+        if(unlink(link_path)!=0){
+            {
+            printf("Could not remove symlink\n");
+            exit(6);
+        }
+        }{
+            printf("symlink removed!\n");
+        }
+    }
+}
+
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+//((((((((((((((((((((((((((((((((((((((((((((((  MAIN   ))))))))))))))))))))))))))))))))))))))))))))))
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+
 int main(int argc, char **argv){
 
     if(argc!=3 && argc!=4){
-        printf("Wrong imput at the start 3 or 4 args req\n");
+        printf("Wrong input. Corect usage and instruction set below...\n");
+        printf("<.exe> add <hunt_id> <treasure_id>\n");
+        printf("<.exe> list <hunt_id>\n");
+        printf("<.exe> view <hunt_id> <treasure_id>\n");
+        printf("<.exe> remove_treasure <hunt_id> <treasure_id\n");
+        printf("<.exe> remove_hunt <hunt_id>\n");
         exit(0);
     }
     
@@ -429,22 +617,27 @@ int main(int argc, char **argv){
             exit(2);
         }
 
-        //remove_treasure(argv[2],argv[3]);//search if exists then do
+        remove_treasure(argv[2],argv[3]);//search if exists then do
     }
 
     ////////////////////////////////////remove entire hunt
     else if(strcmp(argv[1],"remove_hunt")==0){
         
-        if(argc!=4){
+        if(argc!=3){
             printf("wrong input: remove_hunt <hunt_id>\n");
             exit(2);
         }
 
-        //remove_hunt(argv[2],argv[3]);//search if exists then do
+        remove_hunt(argv[2]);//search if exists then do
     }
 
     else{
-        printf("\nWrong instruction set \n");
+        printf("\nWrong instruction set. Corect usage below...\n");
+        printf("<.exe> add <hunt_id> <treasure_id>\n");
+        printf("<.exe> list <hunt_id>\n");
+        printf("<.exe> view <hunt_id> <treasure_id>\n");
+        printf("<.exe> remove_treasure <hunt_id> <treasure_id\n");
+        printf("<.exe> remove_hunt <hunt_id>\n");
         exit(3);
     }
 
