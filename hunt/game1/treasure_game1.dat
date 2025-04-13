@@ -1,0 +1,3 @@
+data-->id,user_id,lat,lon,clue,value
+tr1,paul,99.000000,222.000000,2,111
+tr1,rebe,999.200012,22.200001,aaaa,10
