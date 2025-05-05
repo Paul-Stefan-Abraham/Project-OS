@@ -1,0 +1,13 @@
+///////////////////////////////////////////////
+hunt1 log created at: 2025-05-05 11:31:49
+///////////////////////////////////////////////
+created new treasure_hunt1.dat 2025-05-05 11:31:49
+///////////////////////////////////////////////
+///////////////begining of logged data////////////
+added tr1 2025-05-05 11:32:00
+added tr2 2025-05-05 11:32:18
+added tr3 2025-05-05 11:32:40
+removed tr1 Treasure found and removed at: 2025-05-05 11:33:55
+Treasure found and viewed at: 2025-05-05 12:20:24
+Treasure found and viewed at: 2025-05-05 12:28:44
+Treasures viewed at: 2025-05-05 12:30:29

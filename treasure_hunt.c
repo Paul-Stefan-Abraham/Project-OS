@@ -6,6 +6,9 @@
 #include <unistd.h>
 #include <time.h>
 
+//For no compatibility problems
+//gcc -Wall treasure_hunt.c -o hunt.exe
+
 #define PWD_SIZE 800
 #define PATH_SIZE 1000
 #define PATH2_SIZE 1500
@@ -448,8 +451,9 @@ void remove_treasure(const char*hunt_id, const char* tr_id){
         //log action to log file
 
         fseek(log_file,0,SEEK_END);
-        fputs(tr_id,log_file);
         if(found){
+            fputs("removed ",log_file);
+            fputs(tr_id,log_file);
             fputs(" Treasure found and removed at: ",log_file);
 
             //also replace the tr_file with temp
@@ -468,6 +472,7 @@ void remove_treasure(const char*hunt_id, const char* tr_id){
             }
 
         }else{
+            fputs(tr_id,log_file);
             fputs(" Treasure could not be removed at: ",log_file);
             printf("Treasure %s not found\n",tr_id);
             //just delete temp
@@ -598,6 +603,18 @@ int main(int argc, char **argv){
 
     }
 
+    // //parse hunts and print each name and how many treasures in it
+    // else if(strcmp(argv[1],"list_hunt")==0){
+
+    //     if(argc!=2){
+    //         printf("wrong input: list_hunt\n");
+    //         exit(2);
+    //     }
+
+    //     list_all_hunts();
+
+    // }
+
     /////////////////////////////////// View details of a specific treasure
     else if(strcmp(argv[1],"view")==0){
         
@@ -634,6 +651,7 @@ int main(int argc, char **argv){
     else{
         printf("\nWrong instruction set. Corect usage below...\n");
         printf("<.exe> add <hunt_id> <treasure_id>\n");
+        printf("<.exe> list_hunts\n");
         printf("<.exe> list <hunt_id>\n");
         printf("<.exe> view <hunt_id> <treasure_id>\n");
         printf("<.exe> remove_treasure <hunt_id> <treasure_id\n");
