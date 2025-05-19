@@ -1,3 +1,5 @@
 data-->id,user_id,lat,lon,clue,value
 tr2,rebe,99.000000,0.000000,casa,44
-tr3,paul,77.000000,20.000000,hol,99
+tr3,paul,10.000000,20.000000,100,200
+tr4,rebe,44.000000,55.000000,yyyyyy,90
+tr5,paul,10.000000,20.000000,oooooo,800

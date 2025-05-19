@@ -105,6 +105,83 @@ void read_symlinked_files(){
 
 
 //(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+//((((((((((((((((((((((((((((((((((((((((((((((  SCORE CALCULATOR  ))))))))))))))))))))))))))))))))))))))))))))))
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
+
+void calculate_score(){
+
+    DIR *hunt_dir=opendir("./hunt");
+    if (!hunt_dir) {
+        perror("cant open ./hunt directory");
+        return;
+    }
+
+    struct dirent *entry;
+    while((entry=readdir(hunt_dir))!=NULL){
+        
+        if(strcmp(entry->d_name, ".")==0 || strcmp(entry->d_name,"..")==0){
+            continue;
+        }
+            
+
+        char subdir_path[PATH_SIZE];
+        snprintf(subdir_path, sizeof(subdir_path), "./hunt/%s", entry->d_name);
+
+        DIR *subdir=opendir(subdir_path);
+        if(!subdir){
+            continue; 
+        }
+        closedir(subdir);
+
+        
+        int pipefd[2];
+        if(pipe(pipefd)==-1){
+            perror("pipe");
+            continue;
+        }
+
+        pid_t pid=fork();
+        if (pid<0) {
+            perror("fork");
+            continue;
+        }
+
+        if(pid==0){
+            //child stdout to pipe
+            close(pipefd[0]); 
+            dup2(pipefd[1], STDOUT_FILENO);
+            close(pipefd[1]);
+
+            execl("./score.exe", "score.exe", entry->d_name, (char *)NULL);
+            perror("execl failed");
+            exit(1);
+        } 
+        else{//parent
+            close(pipefd[1]);
+
+            printf("Scores for hunt %s:\n", entry->d_name);
+
+            char buffer[PATH_SIZE];
+            FILE *pipe_output = fdopen(pipefd[0], "r");
+
+
+            while(fgets(buffer, sizeof(buffer), pipe_output)!=NULL){
+                printf("  %s", buffer);
+            }
+            fclose(pipe_output);
+
+            waitpid(pid, NULL, 0);
+            
+            printf("\n");
+        }
+    }
+
+    closedir(hunt_dir);
+}
+
+
+
+//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
 //((((((((((((((((((((((((((((((((((((((((((((((  MONITOR  ))))))))))))))))))))))))))))))))))))))))))))))
 //(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
 
@@ -122,7 +199,7 @@ void handle_usr1(int sig) {//upgrade handle to actualy handle displaing
     }
     fclose(f);
 
-    cmd[strcspn(cmd,"\n")]=0; // get rid newline
+    cmd[strcspn(cmd,"\n")]=0;
 
     if (strncmp(cmd,"list_hunts",10)==0){
         read_symlinked_files();
@@ -144,15 +221,18 @@ void handle_usr1(int sig) {//upgrade handle to actualy handle displaing
     }
 
     else if(strstr(cmd,"view_treasure")!=NULL){
-    char full_cmd[512];
-    strtok(cmd," "); 
-    char *args=strtok(NULL, ""); 
+        char full_cmd[512];
+        strtok(cmd," "); 
+        char *args=strtok(NULL, ""); 
     if (args==NULL) {
         fprintf(stderr, "monitor: missing arguments for view_treasure\n");
         return;
     }
     snprintf(full_cmd,sizeof(full_cmd), "./hunt.exe view %s", args);
     system(full_cmd);
+    }else if(strstr(cmd,"calculate_score")){
+
+        calculate_score();
     }
 
     else {
@@ -184,9 +264,6 @@ void monitor_loop(){
     }
 }
 
-//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
-//((((((((((((((((((((((((((((((((((((((((((((((  HUB ))))))))))))))))))))))))))))))))))))))))))))))
-//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
 
 
 //keeping a record of commands
@@ -253,84 +330,6 @@ void send_command_to_monitor(const char *cmd) {
     kill(monitor_pid, SIGUSR1);
 }
 
-
-
-//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
-//((((((((((((((((((((((((((((((((((((((((((((((  SCORE CALCULATOR  ))))))))))))))))))))))))))))))))))))))))))))))
-//(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
-
-void calculate_score(){
-
-    DIR *hunt_dir=opendir("./hunt");
-    if (!hunt_dir) {
-        perror("cant open ./hunt directory");
-        return;
-    }
-
-    struct dirent *entry;
-    while((entry=readdir(hunt_dir))!=NULL){
-        
-        if (strcmp(entry->d_name, ".")==0 || strcmp(entry->d_name,"..")==0){
-            continue;
-        }
-            
-
-        char subdir_path[PATH_SIZE];
-        snprintf(subdir_path, sizeof(subdir_path), "./hunt/%s", entry->d_name);
-
-        DIR *subdir=opendir(subdir_path);
-        if(!subdir){
-            continue; 
-        }
-        closedir(subdir);
-
-        
-        int pipefd[2];
-        if(pipe(pipefd)==-1){
-            perror("pipe");
-            continue;
-        }
-
-        pid_t pid=fork();
-        if (pid<0) {
-            perror("fork");
-            continue;
-        }
-
-        if(pid==0){
-            //child stdout to pipe
-            close(pipefd[0]); 
-            dup2(pipefd[1], STDOUT_FILENO);
-            close(pipefd[1]);
-
-            execl("./score.exe", "score.exe", entry->d_name, (char *)NULL);
-            perror("execl failed");
-            exit(1);
-        } 
-        else{//parent
-            close(pipefd[1]);
-
-            printf("Scores for hunt %s:\n", entry->d_name);
-
-            char buffer[PATH_SIZE];
-            FILE *pipe_output = fdopen(pipefd[0], "r");
-
-
-            while(fgets(buffer, sizeof(buffer), pipe_output)!=NULL){
-                printf("  %s", buffer);
-            }
-            fclose(pipe_output);
-
-            waitpid(pid, NULL, 0);
-            
-            printf("\n");
-        }
-    }
-
-    closedir(hunt_dir);
-}
-
-
 //(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
 //((((((((((((((((((((((((((((((((((((((((((((((  MAIN   ))))))))))))))))))))))))))))))))))))))))))))))
 //(((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))
@@ -387,7 +386,7 @@ int main() {
             printf("List of commands: start_monitor, stop_monitor, list_hunts, list_treasures <huntid>, view_treasure <huntid-treasureid>,calculate_score, help, exit\n");
         } 
         else if (strcmp(command, "calculate_score") == 0) {
-        calculate_score();
+            send_command_to_monitor(command);
         }
         else if(strcmp(command, "exit")==0){
             if(monitor_active){

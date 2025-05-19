@@ -15,7 +15,8 @@ typedef struct {
 UserScore users[MAX_USERS];
 int user_count = 0;
 
-// Add or update a user's score
+///////////////////////////////////////////////////////////
+//add to user
 void add_score(const char *username, int value) {
     for (int i = 0; i < user_count; i++) {
         if (strcmp(users[i].username, username) == 0) {
@@ -24,7 +25,6 @@ void add_score(const char *username, int value) {
         }
     }
 
-    // New user
     if (user_count < MAX_USERS) {
         strncpy(users[user_count].username, username, sizeof(users[user_count].username)-1);
         users[user_count].total_score = value;
@@ -32,32 +32,33 @@ void add_score(const char *username, int value) {
     }
 }
 
-// Parse a single treasure line and extract user and value
-void parse_line(char *line) {
-    line[strcspn(line, "\n")] = 0;  // Remove newline
 
-    char *token = strtok(line, ","); // ID
+//get one data line
+void parse_line(char *line) {
+    line[strcspn(line, "\n")] = 0; 
+
+    char *token = strtok(line, ","); 
     if (!token) return;
 
-    token = strtok(NULL, ","); // Username
+    token = strtok(NULL, ","); 
     if (!token) return;
     char username[64];
     strncpy(username, token, sizeof(username)-1);
 
-    // Skip lat, long, clue
+    //skip some
     for (int i = 0; i < 3; i++) {
         token = strtok(NULL, ",");
         if (!token) return;
     }
 
-    token = strtok(NULL, ","); // Value
+    token = strtok(NULL, ","); 
     if (!token) return;
     int value = atoi(token);
 
     add_score(username, value);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {//get hunt and parse it
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <hunt_id>\n", argv[0]);
         return 1;
@@ -75,7 +76,6 @@ int main(int argc, char *argv[]) {
 
     char line[LINE_SIZE];
 
-    // Skip header if present
     fgets(line, sizeof(line), f);
 
     while (fgets(line, sizeof(line), f)) {
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
     fclose(f);
 
-    // Print results for pipe to read
+    //results 2 pipe
     for (int i = 0; i < user_count; i++) {
         printf("%s: %d\n", users[i].username, users[i].total_score);
     }
